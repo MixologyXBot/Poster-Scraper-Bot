@@ -5,6 +5,7 @@ import requests
 
 from .. import LOGGER
 from .utils.xtra import _sync_to_async
+from config import Config
 
 _BYPASS_CMD_TO_SERVICE = {
     "gdflix": "gdflix",
@@ -36,26 +37,6 @@ _BYPASS_CMD_TO_SERVICE = {
     "hbl": "hblinks",
 }
 
-_BYPASS_ENDPOINTS = {
-    # By : Hgbots
-    "gdflix": "https://hgbots.vercel.app/bypaas/gd.php?url=",
-    "hubdrive": "https://hgbots.vercel.app/bypaas/hubdrive.php?url=",  
-   # By : NickUpdates 
-    "transfer_it": "https://transfer-it-henna.vercel.app/post",
-    # By: PBX1 
-    "hubcloud": "https://pbx1botapi.vercel.app/api/hubcloud?url=",
-    "vcloud": "https://pbx1botapi.vercel.app/api/vcloud?url=",
-    "hubcdn": "https://pbx1botapi.vercel.app/api/hubcdn?url=",
-    "driveleech": "https://pbx1botapi.vercel.app/api/driveleech?url=",
-    "neo": "https://pbx1botapi.vercel.app/api/neo?url=",
-    "gdrex": "https://pbx1botapi.vercel.app/api/gdrex?url=",
-    "pixelcdn": "https://pbx1botapi.vercel.app/api/pixelcdn?url=",
-    "extraflix": "https://pbx1botapi.vercel.app/api/extraflix?url=",
-    "extralink": "https://pbx1botapi.vercel.app/api/extralink?url=",
-    "luxdrive": "https://pbx1botapi.vercel.app/api/luxdrive?url=",
-    "nexdrive": "https://pbx1botsapi2.vercel.app/api/nexdrive?url=",
-    "hblinks": "https://pbx1botsapi2.vercel.app/api/hblinks?url=",
-}
 
 def _bp_srv(cmd):
     cmd = cmd.lower().lstrip("/")
@@ -232,9 +213,9 @@ async def _bp_info(cmd_name, target_url):
     if not service:
         return None, "Unknown platform for this command."
 
-    base = _BYPASS_ENDPOINTS.get(service)
+    base = Config.BYPASS_URL
     if not base:
-        return None, "Bypass endpoint not configured for this service."
+        return None, "Bypass endpoint not configured (BYPASS_URL missing)."
 
     try:
         parsed = urlparse(target_url)
@@ -243,18 +224,15 @@ async def _bp_info(cmd_name, target_url):
     except Exception:
         return None, "Invalid URL."
 
-    api_url = base if service == "transfer_it" else f"{base}{quote_plus(target_url)}"
+    # Dynamic URL construction using Vercel proxy
+    api_url = f"{base}/api/{service}?url={quote_plus(target_url)}"
     LOGGER.info(f"Bypassing via [{service}] -> {api_url}")
 
     try:
-        if service == "transfer_it":
-            resp = await _sync_to_async(
-                requests.post, api_url, json={"url": target_url}, timeout=20
-            )
-        else:
-            resp = await _sync_to_async(
-                requests.get, api_url, timeout=20
-            )
+        # All requests now go through the proxy as GET requests
+        resp = await _sync_to_async(
+            requests.get, api_url, timeout=20
+        )
     except Exception as e:
         LOGGER.error(f"Bypass HTTP error: {e}", exc_info=True)
         return None, "Failed to reach bypass service."
