@@ -6,6 +6,7 @@ import requests
 
 from .. import LOGGER
 from .utils.xtra import _sync_to_async
+from config import Config
 
 def _collect_url_pairs(node, out_list, parent_key=""):
     if isinstance(node, dict):
@@ -75,28 +76,6 @@ _PROVIDER_NAMES = {
     "tiktok": "TikTok",
 }
 
-_WORKERS = {
-    "primevideo": "https://primevideo.the-zake.workers.dev/?url=",
-    "zee5": "https://zee5.the-zake.workers.dev/?url=",
-    "appletv": "https://appletv.the-zake.workers.dev/?url=",
-    "airtelxstream": "https://airtelxstream.the-zake.workers.dev/?url=",
-    "sunnxt": "https://sunnxt.the-zake.workers.dev/?url=",
-    "ahavideo": "https://ahavideo.the-zake.workers.dev/?url=",
-    "iqiyi": "https://iqiyi.the-zake.workers.dev/?url=",
-    "wetv": "https://wetv.the-zake.workers.dev/?url=",
-    "shemaroo": "https://shemaroo.the-zake.workers.dev/?url=",
-    "bookmyshow": "https://bookmyshow.the-zake.workers.dev/?url=",
-    "plextv": "https://plextv.the-zake.workers.dev/?url=",
-    "addatimes": "https://addatimes.the-zake.workers.dev/?url=",
-    "stage": "https://stage.the-zake.workers.dev/?url=",
-    "netflix": "https://netflix.the-zake.workers.dev/?url=",
-    "mxplayer": "https://mxplayer.the-zake.workers.dev/?url=",
-
-    "ytdl": "https://youtubedl.the-zake.workers.dev/?url=",
-    "instagram": "https://instagramdl.the-zake.workers.dev/?url=",
-    "facebook": "https://facebookdl.the-zake.workers.dev/?url=",
-    "tiktok": "https://tiktokdl.the-zake.workers.dev/?url=",
-}
 def _extract_url_from_message(message):
     if getattr(message, "command", None) and len(message.command) > 1:
         return message.command[1].strip()
@@ -212,9 +191,9 @@ async def _fetch_ott_info(cmd_name: str, target_url: str):
     if not provider:
         return None, "Unknown platform for this command."
 
-    base = _WORKERS.get(provider)
+    base = Config.BYPASS_URL
     if not base:
-        return None, "Worker endpoint not configured for this platform."
+        return None, "Bypass endpoint not configured (BYPASS_URL missing)."
 
     try:
         parsed = urlparse(target_url)
@@ -223,7 +202,7 @@ async def _fetch_ott_info(cmd_name: str, target_url: str):
     except Exception:
         return None, "Invalid URL."
 
-    worker_url = f"{base}{quote_plus(target_url)}"
+    worker_url = f"{base}/api/{provider}?url={quote_plus(target_url)}"
     LOGGER.info(f"Fetching OTT poster via {worker_url}")
 
     try:
